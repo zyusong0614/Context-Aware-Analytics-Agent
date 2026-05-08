@@ -1,12 +1,12 @@
 # Context-Aware Analytics Agent (CA3) - v0.2
 
-CA3 is a local-first analytics agent for BigQuery projects. It uses project metadata as context, streams agent responses into a SvelteKit UI, executes read-only SQL through a Python FastAPI sidecar, and includes an evaluation workflow for checking generated SQL and result rows.
+CA3 is a local-first analytics agent for data projects. It uses project metadata as context, streams agent responses into a SvelteKit UI, executes read-only SQL through a Python FastAPI sidecar, and includes an evaluation workflow for checking generated SQL and result rows.
 
 ## Key Features
 
 - **Context-aware agent workflow**: The backend uses the Vercel AI SDK tool loop with table search, metadata reading, and SQL execution tools.
 - **Project-configured models**: Chat and evals read `llm.provider` and `llm.annotation_model` from `ca3_config.yaml`; environment variables remain supported for API keys.
-- **Filesystem metadata graph**: CA3 reads Hive-style metadata paths such as `type=bigquery/database=.../schema=.../table=...`.
+- **Filesystem metadata graph**: `ca3 sync` reads configured providers and writes context files such as `databases/type=bigquery/database=.../schema=.../table=...`.
 - **Safe SQL execution**: SQL is limited to `SELECT` / `WITH`, placeholder IDs are blocked, and missing `LIMIT` clauses are injected before execution.
 - **Evaluation v0.2**: Evals run one case at a time, verify SQL fragments and expected rows, save JSON history, and display generated SQL/check details in the UI.
 - **Modern local UI**: SvelteKit 5 app with chat, table explorer, inspector, chat history, and eval views.
@@ -15,12 +15,57 @@ CA3 is a local-first analytics agent for BigQuery projects. It uses project meta
 
 - Node.js 20+
 - Python 3.12+ with `uv`
-- BigQuery access configured for the project in `cli/redlake-ca3/ca3_config.yaml`
+- Database access for the providers configured in your CA3 project
 - At least one LLM API key matching your configured provider
 
-## Configuration
+## Installation
 
-Create a repo-root `.env` file:
+Install workspace dependencies:
+
+```bash
+npm install
+
+cd cli
+uv sync
+uv pip install -e ".[bigquery]"
+source .venv/bin/activate
+```
+
+The CLI is available as `ca3` inside the Python environment:
+
+```bash
+ca3 --help
+```
+
+## Project Configuration
+
+The normal setup flow is to create or open a CA3 project folder, then configure databases and models there.
+
+### Option A: Initialize a Project
+
+Use `ca3 init` to create a project folder with `ca3_config.yaml`:
+
+```bash
+mkdir my-ca3-project
+cd my-ca3-project
+ca3 init
+```
+
+Then configure the generated `ca3_config.yaml` to point at your database and model provider. If you are not using an activated virtual environment, run the same CLI commands from `cli/` as `uv run ca3 ...`.
+
+### Option B: Use the Included Redlake Example
+
+This repository includes `cli/redlake-ca3` as a working example project. It is associated with the sample data repository:
+
+```text
+https://github.com/zyusong0614/redlake
+```
+
+Use it as a reference, not as the required project path for every installation. For a fresh project, the CA3 project folder and the data repository can be separate directories.
+
+## Environment
+
+Create a repo-root `.env` file for local backend/frontend development:
 
 ```env
 ANTHROPIC_API_KEY=sk-ant-...
@@ -28,10 +73,20 @@ ANTHROPIC_API_KEY=sk-ant-...
 # OPENAI_API_KEY=...
 # GOOGLE_GENERATIVE_AI_API_KEY=...
 
+CA3_DEFAULT_PROJECT_PATH=/absolute/path/to/my-ca3-project
+```
+
+For the included example, that path is:
+
+```env
 CA3_DEFAULT_PROJECT_PATH=/absolute/path/to/Context-Aware-Analytics-Agent/cli/redlake-ca3
 ```
 
-Configure the active project in `cli/redlake-ca3/ca3_config.yaml`:
+API keys are safer in `.env`; `llm.api_key` in `ca3_config.yaml` is only a fallback.
+
+## YAML Configuration
+
+Each CA3 project is configured by its own `ca3_config.yaml`. A BigQuery project can look like this:
 
 ```yaml
 project_name: redlake-ca3
@@ -46,30 +101,37 @@ databases:
     sso: true
 ```
 
-API keys are safer in `.env`; `llm.api_key` in `ca3_config.yaml` is only a fallback.
-
-## Installation
-
-Install workspace dependencies:
+Validate the configured database and LLM connections:
 
 ```bash
-npm install
-
-cd cli
-uv sync
-uv pip install -e ".[bigquery]"
+cd /absolute/path/to/my-ca3-project
+ca3 debug
 ```
 
-Generate or refresh metadata:
+Generate or refresh metadata context:
+
+```bash
+ca3 sync
+```
+
+For the included Redlake example:
 
 ```bash
 cd cli/redlake-ca3
-uv run ca3 sync
+ca3 debug
+ca3 sync
 ```
 
 ## Running Locally
 
-Start three services:
+You can launch the app through the CLI from a configured project:
+
+```bash
+cd /absolute/path/to/my-ca3-project
+ca3 chat
+```
+
+For development on this repository, start three services:
 
 ```bash
 # Backend, port 5005
@@ -99,7 +161,7 @@ The backend SQL tool calls `/execute_sql` with `sql` and `ca3_project_folder`.
 
 ## Evaluations
 
-Eval cases live in `cli/redlake-ca3/tests/*.yml` or `*.yaml`:
+Eval cases live in each CA3 project under `tests/*.yml` or `tests/*.yaml`. For the included Redlake example, that is `cli/redlake-ca3/tests/`.
 
 ```yaml
 - id: tech_keywords_count
@@ -125,8 +187,8 @@ Run from CLI:
 
 ```bash
 cd cli/redlake-ca3
-uv run ca3 test --select tech_keywords_count
-uv run ca3 test -m anthropic:claude-haiku-4-5-20251001
+ca3 test --select tech_keywords_count
+ca3 test -m anthropic:claude-haiku-4-5-20251001
 ```
 
 When `-m` is omitted, the CLI uses the project model from `ca3_config.yaml`.
