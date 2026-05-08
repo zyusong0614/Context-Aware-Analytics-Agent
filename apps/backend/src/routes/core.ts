@@ -78,6 +78,10 @@ export const coreRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =
 
 				for (const entry of entries) {
 					if (entry.isDirectory()) {
+						// Only scan type=bigquery directories at the top level to hide other sources
+						if (relPath === '' && !entry.name.startsWith('type=bigquery')) {
+							continue;
+						}
 						scan(path.join(currentDir, entry.name), path.join(relPath, entry.name));
 					}
 				}

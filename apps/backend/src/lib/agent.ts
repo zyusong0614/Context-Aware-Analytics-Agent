@@ -16,11 +16,16 @@ export async function runAgent(
 		const databasesDir = path.join(projectPath, 'databases');
 		let context = '';
 		if (fs.existsSync(databasesDir)) {
-			const scan = (dir: string) => {
+			const scan = (dir: string, depth = 0) => {
 				const entries = fs.readdirSync(dir, { withFileTypes: true });
 				for (const entry of entries) {
+					// At the top level (depth 0), only focus on bigquery
+					if (depth === 0 && entry.isDirectory() && !entry.name.startsWith('type=bigquery')) {
+						continue;
+					}
+					
 					const fullPath = path.join(dir, entry.name);
-					if (entry.isDirectory()) scan(fullPath);
+					if (entry.isDirectory()) scan(fullPath, depth + 1);
 					else if (entry.name.endsWith('.md')) {
 						const fileName = entry.name;
 						context += `\n[Context from ${fileName}]:\n${fs.readFileSync(fullPath, 'utf8')}\n`;
