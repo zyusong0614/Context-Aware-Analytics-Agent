@@ -53,15 +53,15 @@ ca3 init
 
 Then configure the generated `ca3_config.yaml` to point at your database and model provider. If you are not using an activated virtual environment, run the same CLI commands from `cli/` as `uv run ca3 ...`.
 
-### Option B: Use the Included Redlake Example
+### Demo Project: Redlake
 
-This repository includes `cli/redlake-ca3` as a working example project. It is associated with the sample data repository:
+The demo for this repository uses the Redlake project:
 
 ```text
 https://github.com/zyusong0614/redlake
 ```
 
-Use it as a reference, not as the required project path for every installation. For a fresh project, the CA3 project folder and the data repository can be separate directories.
+The checked-in `cli/redlake-ca3` folder is the CA3 project configuration used by that demo. It points CA3 at the Redlake BigQuery dataset, stores the generated metadata context, and contains the demo eval cases. For your own data, create a separate CA3 project with `ca3 init` and update its `ca3_config.yaml`.
 
 ## Environment
 
@@ -76,7 +76,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 CA3_DEFAULT_PROJECT_PATH=/absolute/path/to/my-ca3-project
 ```
 
-For the included example, that path is:
+For the Redlake demo, that path is:
 
 ```env
 CA3_DEFAULT_PROJECT_PATH=/absolute/path/to/Context-Aware-Analytics-Agent/cli/redlake-ca3
@@ -114,7 +114,7 @@ Generate or refresh metadata context:
 ca3 sync
 ```
 
-For the included Redlake example:
+For the Redlake demo:
 
 ```bash
 cd cli/redlake-ca3
@@ -161,7 +161,7 @@ The backend SQL tool calls `/execute_sql` with `sql` and `ca3_project_folder`.
 
 ## Evaluations
 
-Eval cases live in each CA3 project under `tests/*.yml` or `tests/*.yaml`. For the included Redlake example, that is `cli/redlake-ca3/tests/`.
+Eval cases live in each CA3 project under `tests/*.yml` or `tests/*.yaml`. For the Redlake demo, that is `cli/redlake-ca3/tests/`.
 
 ```yaml
 - id: tech_keywords_count
