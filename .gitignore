@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+
+# Environment & Secrets
+.env
+.env.*
+ca3_config.yaml
+!cli/ca3_config.example.yaml
+
+# SvelteKit & Vite
+.svelte-kit/
+dist/
+.vercel/
+.output/
+
+# Project Data
+cli/*/databases/
+test_results.json
+*.log
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
