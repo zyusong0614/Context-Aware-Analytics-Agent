@@ -2,6 +2,18 @@
 
 CA3 is a local-first analytics agent for data projects. It uses project metadata as context, streams agent responses into a SvelteKit UI, executes read-only SQL through a Python FastAPI sidecar, and includes an evaluation workflow for checking generated SQL and result rows.
 
+## Demo Project: Redlake
+
+The demo for this repository uses the Redlake project:
+
+```text
+https://github.com/zyusong0614/redlake
+```
+
+Demo video: coming soon.
+
+The checked-in `cli/redlake-ca3` folder is the CA3 project configuration used by that demo. It points CA3 at the Redlake BigQuery dataset, stores the generated metadata context, and contains the demo eval cases. For your own data, create a separate CA3 project with `ca3 init` and update its `ca3_config.yaml`.
+
 ## Key Features
 
 - **Context-aware agent workflow**: The backend uses the Vercel AI SDK tool loop with table search, metadata reading, and SQL execution tools.
@@ -41,8 +53,6 @@ ca3 --help
 
 The normal setup flow is to create or open a CA3 project folder, then configure databases and models there.
 
-### Option A: Initialize a Project
-
 Use `ca3 init` to create a project folder with `ca3_config.yaml`:
 
 ```bash
@@ -52,16 +62,6 @@ ca3 init
 ```
 
 Then configure the generated `ca3_config.yaml` to point at your database and model provider. If you are not using an activated virtual environment, run the same CLI commands from `cli/` as `uv run ca3 ...`.
-
-### Demo Project: Redlake
-
-The demo for this repository uses the Redlake project:
-
-```text
-https://github.com/zyusong0614/redlake
-```
-
-The checked-in `cli/redlake-ca3` folder is the CA3 project configuration used by that demo. It points CA3 at the Redlake BigQuery dataset, stores the generated metadata context, and contains the demo eval cases. For your own data, create a separate CA3 project with `ca3 init` and update its `ca3_config.yaml`.
 
 ## Environment
 
