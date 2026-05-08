@@ -1,99 +1,162 @@
-# Context-Aware Analytics Agent (CA3) - v0.1
+# Context-Aware Analytics Agent (CA3) - v0.2
 
-A next-generation BigQuery analytics agent that understands your data context through deep metadata scanning and features an autonomous self-correction loop for SQL generation.
+CA3 is a local-first analytics agent for BigQuery projects. It uses project metadata as context, streams agent responses into a SvelteKit UI, executes read-only SQL through a Python FastAPI sidecar, and includes an evaluation workflow for checking generated SQL and result rows.
 
-## 🚀 Key Features
+## Key Features
 
-- **Agentic SQL Workflow**: Features a 10-attempt self-correction loop. If BigQuery returns an error, the agent analyzes the stack trace and fixes the SQL automatically.
-- **Deep Metadata Context**: Recursively scans Hive-style directory structures (`type=x/database=y/table=z`) to ingest `columns.md`, `ai_summary.md`, and `how_to_use.md`.
-- **Pre-Execution Validation**: Static analysis layer to catch LLM-hallucinated placeholders (like `project_id`) before hitting the database.
-- **Modern UI**: Built with SvelteKit 5, featuring real-time SSE streaming for chat and a comprehensive Table Explorer with Markdown rendering via `marked`.
+- **Context-aware agent workflow**: The backend uses the Vercel AI SDK tool loop with table search, metadata reading, and SQL execution tools.
+- **Project-configured models**: Chat and evals read `llm.provider` and `llm.annotation_model` from `ca3_config.yaml`; environment variables remain supported for API keys.
+- **Filesystem metadata graph**: CA3 reads Hive-style metadata paths such as `type=bigquery/database=.../schema=.../table=...`.
+- **Safe SQL execution**: SQL is limited to `SELECT` / `WITH`, placeholder IDs are blocked, and missing `LIMIT` clauses are injected before execution.
+- **Evaluation v0.2**: Evals run one case at a time, verify SQL fragments and expected rows, save JSON history, and display generated SQL/check details in the UI.
+- **Modern local UI**: SvelteKit 5 app with chat, table explorer, inspector, chat history, and eval views.
 
----
+## Prerequisites
 
-## 🛠️ Prerequisites
+- Node.js 20+
+- Python 3.12+ with `uv`
+- BigQuery access configured for the project in `cli/redlake-ca3/ca3_config.yaml`
+- At least one LLM API key matching your configured provider
 
-- **Python 3.12+** (managed via `uv`)
-- **Node.js 20+**
-- **Anthropic API Key**: Supporting Next-Gen models (**Claude 4.7 Opus**, **Claude 4.6 Sonnet**, or **Claude 4.5 Haiku**).
-- **Google Cloud Credentials**: Access to a BigQuery project.
+## Configuration
 
----
+Create a repo-root `.env` file:
 
-## 📦 Installation & Setup
+```env
+ANTHROPIC_API_KEY=sk-ant-...
+# Optional when using other providers:
+# OPENAI_API_KEY=...
+# GOOGLE_GENERATIVE_AI_API_KEY=...
 
-### 1. CLI Sidecar (Python)
-The CLI handles database synchronization and SQL execution via Ibis.
+CA3_DEFAULT_PROJECT_PATH=/absolute/path/to/Context-Aware-Analytics-Agent/cli/redlake-ca3
+```
+
+Configure the active project in `cli/redlake-ca3/ca3_config.yaml`:
+
+```yaml
+project_name: redlake-ca3
+llm:
+  provider: anthropic
+  annotation_model: claude-haiku-4-5-20251001
+databases:
+  - type: bigquery
+    name: bigquery-redlake
+    project_id: redlake-474918
+    dataset_id: redlake_dw
+    sso: true
+```
+
+API keys are safer in `.env`; `llm.api_key` in `ca3_config.yaml` is only a fallback.
+
+## Installation
+
+Install workspace dependencies:
 
 ```bash
+npm install
+
 cd cli
-# Install core dependencies and the sidecar package
 uv sync
 uv pip install -e ".[bigquery]"
 ```
 
-### 2. Backend (Fastify/Node.js)
-The backend bridges the LLM, the Database, and the Frontend.
+Generate or refresh metadata:
 
-```bash
-cd apps/backend
-npm install
-# Create .env in the backend directory
-```
-
-**Required `.env` Variables:**
-```env
-ANTHROPIC_API_KEY=sk-ant-xxx
-PORT=5005
-# Absolute path to your specific dataset folder containing 'databases'
-CA3_DEFAULT_PROJECT_PATH=/Volumes/xxx/workspace/Context-Aware-Analytics-Agent/cli/redlake-ca3
-```
-
-### 3. Frontend (SvelteKit)
-```bash
-cd apps/frontend
-npm install
-```
-
----
-
-## 🏁 How to Reproduce
-
-### Step 1: Sync Your Database Metadata
-Go to your project workspace inside the CLI and generate the context files:
 ```bash
 cd cli/redlake-ca3
 uv run ca3 sync
 ```
-*Wait for the 'Sync Complete' message. This generates metadata across 11+ tables.*
 
-### Step 2: Start the Stack
-Open three separate terminal sessions:
+## Running Locally
 
-1. **Python Sidecar** (Ibis Bridge):
-   ```bash
-   cd cli
-   export PORT=8005
-   .venv/bin/python ../apps/backend/fastapi/main.py
-   ```
-2. **Fastify API**:
-   ```bash
-   cd apps/backend
-   npm run dev
-   ```
-3. **SvelteKit UI**:
-   ```bash
-   cd apps/frontend
-   npm run dev
-   ```
+Start three services:
 
-### Step 3: Run a Context-Aware Query
-Navigate to `http://localhost:3000` and try:
-> "Analyze the tech_keywords table and tell me the distribution of companies."
+```bash
+# Backend, port 5005
+npm run dev --workspace=@ca3/backend
 
-Watch the **Inspector** tab to see the Agent's thought process, the generated SQL, and any **Self-correction** steps it takes if the first attempt fails.
+# Frontend, port 3000
+npm run dev --workspace=@ca3/frontend
 
----
+# FastAPI SQL sidecar, port 8005
+npm run fastapi --workspace=@ca3/backend
+```
 
-## 📜 License
-MIT - v0.1-stable
+Then open:
+
+```text
+http://localhost:3000
+```
+
+The SQL sidecar exposes:
+
+```text
+GET  /health
+POST /execute_sql
+```
+
+The backend SQL tool calls `/execute_sql` with `sql` and `ca3_project_folder`.
+
+## Evaluations
+
+Eval cases live in `cli/redlake-ca3/tests/*.yml` or `*.yaml`:
+
+```yaml
+- id: tech_keywords_count
+  question: "How many tech keywords are there in total?"
+  expected_sql_contains: ["COUNT", "tech_keywords"]
+  forbidden_sql_contains: ["DROP", "UPDATE"]
+  expected_columns: ["total_tech_keywords"]
+  expected_rows:
+    - total_tech_keywords: 118
+  threshold: 1.0
+```
+
+Evaluation behavior:
+
+- `GET /api/core/evals` lists cases and their latest saved result.
+- `POST /api/core/evals/run` runs one case by `id`.
+- SQL checks are case-insensitive.
+- Row checks ignore row order and allow small numeric tolerance.
+- Any SQL execution error fails the eval, even if SQL text checks pass.
+- Results are saved under `tests/outputs/results_*.json`.
+
+Run from CLI:
+
+```bash
+cd cli/redlake-ca3
+uv run ca3 test --select tech_keywords_count
+uv run ca3 test -m anthropic:claude-haiku-4-5-20251001
+```
+
+When `-m` is omitted, the CLI uses the project model from `ca3_config.yaml`.
+
+## Verification
+
+Useful checks before release:
+
+```bash
+npm run lint --workspace=@ca3/backend
+npm test --workspace=@ca3/backend
+npm run check --workspace=@ca3/frontend
+npm run build --workspace=@ca3/backend
+npm run build --workspace=@ca3/frontend
+```
+
+Current backend test coverage includes:
+
+- SQL tool safety and FastAPI sidecar contract
+- Project model config resolution
+- Agent stream handling for AI SDK 6
+- Table metadata route security
+- Eval case loading, verifier behavior, and native eval run API
+
+## Notes
+
+- Local database files such as `apps/backend/ca3_local.db` are ignored and should not be committed.
+- macOS AppleDouble files (`._*`, `.!*`) are ignored and were removed from the repository history moving forward.
+- The frontend proxies API calls to the backend during local development.
+
+## License
+
+MIT
