@@ -26,8 +26,8 @@ pytestmark = pytest.mark.skipif(TRINO_HOST is None, reason="TRINO_HOST not set -
 @pytest.fixture(scope="module")
 def temp_schemas():
     """Create temporary schemas/tables and clean up after tests."""
-    public_schema = f"nao_it_public_{uuid.uuid4().hex[:8]}"
-    another_schema = f"nao_it_another_{uuid.uuid4().hex[:8]}"
+    public_schema = f"ca3_it_public_{uuid.uuid4().hex[:8]}"
+    another_schema = f"ca3_it_another_{uuid.uuid4().hex[:8]}"
 
     kwargs = {
         "host": os.environ["TRINO_HOST"],

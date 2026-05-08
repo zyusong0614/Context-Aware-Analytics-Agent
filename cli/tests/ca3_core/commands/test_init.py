@@ -86,13 +86,13 @@ class TestCreateEmptyStructure:
         assert rules_file.exists()
         assert rules_file.is_file()
 
-    def test_creates_naoignore_file(self, tmp_path: Path):
-        """Creates .naoignore file with templates/ entry."""
+    def test_creates_ca3ignore_file(self, tmp_path: Path):
+        """Creates .ca3ignore file with templates/ entry."""
         folders, files = create_empty_structure(tmp_path)
 
-        naoignore_file = tmp_path / ".naoignore"
-        assert naoignore_file.exists()
-        content = naoignore_file.read_text()
+        ca3ignore_file = tmp_path / ".ca3ignore"
+        assert ca3ignore_file.exists()
+        content = ca3ignore_file.read_text()
         assert "templates/" in content
 
     def test_returns_created_files_list(self, tmp_path: Path):
@@ -102,7 +102,7 @@ class TestCreateEmptyStructure:
         assert len(files) >= 2
         file_paths = [f.path for f in files]
         assert Path("RULES.md") in file_paths
-        assert Path(".naoignore") in file_paths
+        assert Path(".ca3ignore") in file_paths
 
     def test_creates_nested_folders(self, tmp_path: Path):
         """Creates nested folder structures like agent/tools."""

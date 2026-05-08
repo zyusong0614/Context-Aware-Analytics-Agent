@@ -24,7 +24,7 @@ POSTHOG_HOST = os.environ.get("POSTHOG_HOST", "https://eu.i.posthog.com")
 _client: Posthog | None = None
 
 # File to persist anonymous distinct_id across CLI invocations
-DISTINCT_ID_FILE = Path.home() / ".nao" / "distinct_id"
+DISTINCT_ID_FILE = Path.home() / ".ca3" / "distinct_id"
 
 
 def get_or_create_distinct_id() -> str:

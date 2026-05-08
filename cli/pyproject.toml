@@ -83,7 +83,7 @@ ca3 = "ca3_core.main:main"
 
 [project.urls]
 Homepage = "https://getca3.io"
-Repository = "https://github.com/naolabs/chat"
+Repository = "https://github.com/zyusong0614/Context-Aware-Analytics-Agent"
 
 [dependency-groups]
 dev = ["ruff>=0.8.0", "ty>=0.0.9", "ca3-core[all]"]

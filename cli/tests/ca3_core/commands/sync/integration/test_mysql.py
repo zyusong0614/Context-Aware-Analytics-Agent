@@ -7,9 +7,9 @@ Connection is configured via environment variables:
 The test suite is skipped entirely when MYSQL_HOST is not set.
 
 To run locally with Docker:
-    docker run -e MYSQL_ROOT_PASSWORD=naoTesting123! -p 3306:3306 mysql:8
+    docker run -e MYSQL_ROOT_PASSWORD=ca3Testing123! -p 3306:3306 mysql:8
 
-    MYSQL_HOST=localhost MYSQL_USER=root MYSQL_PASSWORD="naoTesting123!" \\
+    MYSQL_HOST=localhost MYSQL_USER=root MYSQL_PASSWORD="ca3Testing123!" \\
         uv run pytest tests/ca3_core/commands/sync/integration/test_mysql.py -v
 """
 
@@ -45,7 +45,7 @@ def _mysql_conn(database: str = "information_schema"):
 @pytest.fixture(scope="module")
 def temp_database():
     """Create temporary databases and populate with test data, then clean up."""
-    db_name = f"nao_test_{uuid.uuid4().hex[:8].lower()}"
+    db_name = f"ca3_test_{uuid.uuid4().hex[:8].lower()}"
     another_db = f"{db_name}{_ANOTHER_SUFFIX}"
 
     conn = _mysql_conn()

@@ -1,0 +1,37 @@
+services:
+  sidecar:
+    build:
+      context: ./cli
+    ports:
+      - "8005:8005"
+    volumes:
+      - ./cli:/app/cli
+    environment:
+      - PORT=8005
+
+  backend:
+    build:
+      context: .
+      dockerfile: ./apps/backend/Dockerfile
+    ports:
+      - "5005:5005"
+    depends_on:
+      - sidecar
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - CA3_DEFAULT_PROJECT_PATH=/app/cli/redlake-ca3
+    volumes:
+      - .:/app
+
+  frontend:
+    build:
+      context: .
+      dockerfile: ./apps/frontend/Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://localhost:5005
+    volumes:
+      - .:/app

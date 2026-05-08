@@ -1,0 +1,9 @@
+- id: tech_keywords_count
+  question: "How many tech keywords are there in total?"
+  expected_sql_contains: ["COUNT", "tech_keywords"]
+  threshold: 0.8
+
+- id: ai_companies_list
+  question: "List all companies categorized as 'AI Company'."
+  expected_sql_contains: ["AI Company"]
+  threshold: 0.9

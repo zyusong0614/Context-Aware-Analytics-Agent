@@ -97,11 +97,17 @@ export const coreRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =
 	fastify.get('/tables/:fqdn', async (request: any, reply) => {
 		try {
 			const dir = getProjectDir();
+			const databasesDir = path.join(dir, 'databases');
 			const encodedFqdn = request.params.fqdn;
-			// Clean up any leading/trailing dots and replace with path separator
-			const cleanFqdn = encodedFqdn.replace(/^__DOT__/, '').replace(/__DOT__$/, '');
-			const relPath = cleanFqdn.replace(/__DOT__/g, path.sep);
-			const tableDir = path.join(dir, 'databases', relPath);
+			
+			// Replace dots with path separators and normalize
+			const relPath = encodedFqdn.replace(/__DOT__/g, path.sep);
+			const tableDir = path.resolve(databasesDir, relPath);
+			
+			// Path Traversal Protection: Ensure the resolved path is within databasesDir
+			if (!tableDir.startsWith(databasesDir)) {
+				return reply.status(403).send({ status: 'error', message: 'Forbidden: Path traversal detected' });
+			}
 			
 			if (!fs.existsSync(tableDir)) {
 				return reply.status(404).send({ status: 'error', message: `Table not found at ${relPath}` });
@@ -109,6 +115,8 @@ export const coreRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =
 
 			const readSafe = (filename: string) => {
 				const fp = path.join(tableDir, filename);
+				// Extra check for the individual file read
+				if (!fp.startsWith(tableDir)) return null;
 				return fs.existsSync(fp) ? fs.readFileSync(fp, 'utf8') : null;
 			};
 
@@ -185,7 +193,10 @@ export const coreRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =
 		let fullResponse = '';
 
 		try {
-			await runAgent(message, projectPath, apiKey, (data) => {
+			const { AgentManager } = await import('../lib/agents/agent-manager');
+			const manager = new AgentManager('anthropic', 'claude-haiku-4-5-20251001', projectPath);
+			
+			await manager.streamResponse(message, (data) => {
 				if (data.type === 'message_delta') {
 					fullResponse += data.content;
 				}
@@ -213,7 +224,31 @@ export const coreRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =
 		return { status: 'ok' };
 	});
 
-	// 8. POST /api/core/evals/run
+	// 8. GET /api/core/evals
+	fastify.get('/evals', async (request, reply) => {
+		try {
+			const projectDir = getProjectDir();
+			const testsDir = path.join(projectDir, 'tests');
+			if (!fs.existsSync(testsDir)) return { status: 'ok', evals: [] };
+
+			const files = fs.readdirSync(testsDir).filter(f => f.endsWith('.yml') || f.endsWith('.yaml'));
+			const evals: any[] = [];
+
+			for (const file of files) {
+				const content = fs.readFileSync(path.join(testsDir, file), 'utf8');
+				const parsed = yaml.load(content) as any[];
+				if (Array.isArray(parsed)) {
+					evals.push(...parsed.map(e => ({ ...e, file })));
+				}
+			}
+
+			return { status: 'ok', evals };
+		} catch (e: any) {
+			return reply.status(500).send({ status: 'error', message: e.message });
+		}
+	});
+
+	// 9. POST /api/core/evals/run
 	fastify.post('/evals/run', async (request: any, reply) => {
 		const { id } = request.body;
 		const projectDir = getProjectDir();
@@ -223,13 +258,15 @@ export const coreRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =
 			const { promisify } = await import('util');
 			const execAsync = promisify(exec);
 
-			// Run the real test command
-			await execAsync('uv run ca3 test', { cwd: path.join(projectDir, '..') });
+			// Run the real test command for the specific project
+			const cliDir = path.join(projectDir, '..');
+			await execAsync('uv run ca3 test', { cwd: cliDir });
 
 			const resultsPath = path.join(projectDir, 'test_results.json');
 			if (fs.existsSync(resultsPath)) {
-				const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
-				return { status: 'ok', results };
+				const allResults = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
+				const testResult = allResults.find((r: any) => r.id === id);
+				return { status: 'ok', result: testResult || { status: 'completed', message: 'No specific result found' } };
 			}
 			
 			return { status: 'ok', message: 'Evaluation completed' };

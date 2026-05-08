@@ -1,11 +1,17 @@
-<script lang="ts">
-	let evals = $state([
-		{ id: 1, name: 'Basic Revenue Query', status: 'pending', lastRun: null },
-		{ id: 2, name: 'Customer Retention Logic', status: 'pass', lastRun: '2024-05-07' },
-		{ id: 3, name: 'Complex Join Aggregation', status: 'fail', lastRun: '2024-05-07' }
-	]);
+	import { onMount } from 'svelte';
+	let evals = $state<any[]>([]);
+	let loading = $state(true);
 
-	async function runEval(id: number) {
+	onMount(async () => {
+		const res = await fetch('/api/core/evals');
+		const data = await res.json();
+		if (data.status === 'ok') {
+			evals = data.evals.map((e: any) => ({ ...e, status: 'pending', lastRun: null }));
+		}
+		loading = false;
+	});
+
+	async function runEval(id: string) {
 		const ev = evals.find(e => e.id === id);
 		if (ev) ev.status = 'running';
 		
@@ -19,8 +25,9 @@
 			
 			if (data.status === 'ok') {
 				if (ev) {
-					ev.status = 'pass'; // You could further refine this by checking data.results
+					ev.status = data.result?.passed ? 'pass' : 'fail';
 					ev.lastRun = new Date().toISOString().split('T')[0];
+					ev.details = data.result;
 				}
 			} else {
 				if (ev) ev.status = 'fail';
@@ -46,18 +53,24 @@
 				</tr>
 			</thead>
 			<tbody class="divide-y divide-neutral-700/50">
-				{#each evals as test}
-					<tr class="hover:bg-neutral-700/30 transition-colors">
-						<td class="p-4 text-sm font-medium text-neutral-200">{test.name}</td>
-						<td class="p-4">
-							<span class="px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider
-								{test.status === 'pass' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 
-								 test.status === 'fail' ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 
-								 test.status === 'running' ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20 animate-pulse' :
-								 'bg-neutral-500/10 text-neutral-500 border border-neutral-500/20'}">
-								{test.status}
-							</span>
-						</td>
+				{#if loading}
+					<tr><td colspan="4" class="p-8 text-center text-neutral-500">Loading tests...</td></tr>
+				{:else}
+					{#each evals as test}
+						<tr class="hover:bg-neutral-700/30 transition-colors">
+							<td class="p-4">
+								<div class="text-sm font-medium text-neutral-200">{test.question}</div>
+								<div class="text-[10px] text-neutral-500 font-mono mt-1">{test.id}</div>
+							</td>
+							<td class="p-4">
+								<span class="px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider
+									{test.status === 'pass' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 
+									 test.status === 'fail' ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 
+									 test.status === 'running' ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20 animate-pulse' :
+									 'bg-neutral-500/10 text-neutral-500 border border-neutral-500/20'}">
+									{test.status}
+								</span>
+							</td>
 						<td class="p-4 text-xs text-neutral-500 font-mono">{test.lastRun || 'Never'}</td>
 						<td class="p-4 text-right">
 							<button 

@@ -29,7 +29,7 @@ pytestmark = pytest.mark.skipif(
 @pytest.fixture(scope="module")
 def temp_catalog():
     """Create a temporary catalog and populate it with test data, then clean up."""
-    catalog_name = f"nao_unit_tests_{uuid.uuid4().hex[:8]}"
+    catalog_name = f"ca3_unit_tests_{uuid.uuid4().hex[:8]}"
 
     # Connect to Databricks using ibis
     conn = ibis.databricks.connect(

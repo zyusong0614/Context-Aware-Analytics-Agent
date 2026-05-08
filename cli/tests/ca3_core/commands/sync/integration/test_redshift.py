@@ -29,7 +29,7 @@ pytestmark = pytest.mark.skipif(
 @pytest.fixture(scope="module")
 def temp_database():
     """Create a temporary database and populate it with test data, then clean up."""
-    db_name = f"nao_unit_tests_{uuid.uuid4().hex[:8]}"
+    db_name = f"ca3_unit_tests_{uuid.uuid4().hex[:8]}"
 
     # Connect to default database to create temp database
     conn = ibis.postgres.connect(

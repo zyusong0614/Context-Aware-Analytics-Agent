@@ -8,10 +8,10 @@ Connection is configured via environment variables:
 The test suite is skipped entirely when MSSQL_HOST is not set.
 
 To run locally with Docker:
-    docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=naoTesting123!" \\
+    docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=ca3Testing123!" \\
         -p 1433:1433 mcr.microsoft.com/mssql/server:2022-latest
 
-    MSSQL_HOST=localhost MSSQL_PASSWORD="naoTesting123!" \\
+    MSSQL_HOST=localhost MSSQL_PASSWORD="ca3Testing123!" \\
         MSSQL_DRIVER="/opt/homebrew/opt/freetds/lib/libtdsodbc.so" \\
         uv run pytest tests/ca3_core/commands/sync/integration/test_mssql.py -v
 """
@@ -54,7 +54,7 @@ def _pyodbc_conn(database: str = "master") -> pyodbc.Connection:
 @pytest.fixture(scope="module")
 def temp_database():
     """Create a temporary database and populate it with test data, then clean up."""
-    db_name = f"nao_unit_tests_{uuid.uuid4().hex[:8].lower()}"
+    db_name = f"ca3_unit_tests_{uuid.uuid4().hex[:8].lower()}"
 
     # Use raw pyodbc with autocommit for DDL (MSSQL forbids CREATE/ALTER DATABASE in transactions)
     master_conn = _pyodbc_conn("master")

@@ -66,12 +66,12 @@ def temp_database():
     """Create a temporary database, populate it with test data, then clean up."""
     conn = _clickhouse_connect("default")
     try:
-        # Drop any leftover nao_unit_tests_* DBs from previous runs so get_schemas returns only ours
+        # Drop any leftover ca3_unit_tests_* DBs from previous runs so get_schemas returns only ours
         list_db = getattr(conn, "list_databases", None)
         if list_db:
             try:
                 for name in list_db():
-                    if name.startswith("nao_unit_tests_"):
+                    if name.startswith("ca3_unit_tests_"):
                         conn.raw_sql(f"DROP DATABASE IF EXISTS `{name}`")
             except Exception:
                 pass
@@ -80,7 +80,7 @@ def temp_database():
         conn.disconnect()
         raise
 
-    db_name = f"nao_unit_tests_{uuid.uuid4().hex[:8].lower()}"
+    db_name = f"ca3_unit_tests_{uuid.uuid4().hex[:8].lower()}"
     conn = _clickhouse_connect("default")
     try:
         conn.raw_sql(f"CREATE DATABASE IF NOT EXISTS `{db_name}`")

@@ -9,7 +9,7 @@ from pathlib import Path
 from ca3_core import __version__
 from ca3_core.ui import UI
 
-CACHE_FILE = Path.home() / ".nao" / "version_check.json"
+CACHE_FILE = Path.home() / ".ca3" / "version_check.json"
 PYPI_URL = "https://pypi.org/pypi/ca3-core/json"
 CHECK_INTERVAL = 24 * 60 * 60
 

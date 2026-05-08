@@ -103,8 +103,8 @@ CREATE TABLE kafka_events (
 ) ENGINE = Kafka
 SETTINGS
     kafka_broker_list = 'kafka:9092',
-    kafka_topic_list = 'nao_sync_events',
-    kafka_group_name = 'nao_sync_tests',
+    kafka_topic_list = 'ca3_sync_events',
+    kafka_group_name = 'ca3_sync_tests',
     kafka_format = 'JSONEachRow';
 
 -- Materialized view + target table ---------------------------------

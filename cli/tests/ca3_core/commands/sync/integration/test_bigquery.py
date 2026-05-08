@@ -31,8 +31,8 @@ pytestmark = pytest.mark.skipif(
 @pytest.fixture(scope="module")
 def temp_datasets():
     """Create or reuse test datasets with test data."""
-    public_dataset_id = "nao_integration_tests_public"
-    another_dataset_id = "nao_integration_tests_another"
+    public_dataset_id = "ca3_integration_tests_public"
+    another_dataset_id = "ca3_integration_tests_another"
 
     # Create BigQuery client for dataset management
     credentials_json_str = os.environ.get("BIGQUERY_CREDENTIALS_JSON")
@@ -60,9 +60,9 @@ def temp_datasets():
         bq_client.delete_dataset(f"{project_id}.{public_dataset_id}", delete_contents=True, not_found_ok=True)
         bq_client.delete_dataset(f"{project_id}.{another_dataset_id}", delete_contents=True, not_found_ok=True)
 
-        # Clean up any old nao_unit_tests_ datasets from failed runs
+        # Clean up any old ca3_unit_tests_ datasets from failed runs
         for dataset in bq_client.list_datasets():
-            if dataset.dataset_id.startswith("nao_unit_tests_"):
+            if dataset.dataset_id.startswith("ca3_unit_tests_"):
                 bq_client.delete_dataset(f"{project_id}.{dataset.dataset_id}", delete_contents=True, not_found_ok=True)
 
         # Create datasets using BigQuery client

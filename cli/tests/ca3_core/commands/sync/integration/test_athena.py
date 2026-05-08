@@ -32,8 +32,8 @@ pytestmark = pytest.mark.skipif(
 def temp_databases():
     """Create temporary databases and populate them with test data, then clean up."""
     # Ensure S3 staging dir is available (fixture scope ensures env var is checked already via skipif)
-    db_name = f"nao_integration_tests_{uuid.uuid4().hex[:8]}"
-    another_db_name = f"nao_integration_tests_another_{uuid.uuid4().hex[:8]}"
+    db_name = f"ca3_integration_tests_{uuid.uuid4().hex[:8]}"
+    another_db_name = f"ca3_integration_tests_another_{uuid.uuid4().hex[:8]}"
     kwargs = {
         "s3_staging_dir": ATHENA_S3_STAGING_DIR,
         "region_name": ATHENA_REGION,

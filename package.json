@@ -1,0 +1,20 @@
+{
+  "name": "context-aware-analytics-agent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A next-generation BigQuery analytics agent with self-correction loop.",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:backend": "npm run dev --workspace=@ca3/backend",
+    "dev:frontend": "npm run dev --workspace=ca3-frontend",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "sync": "cd cli/redlake-ca3 && uv run ca3 sync"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
