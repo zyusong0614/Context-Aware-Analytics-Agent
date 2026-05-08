@@ -6,9 +6,7 @@ CA3 is a local-first analytics agent for data projects. It uses project metadata
 
 The demo for this repository uses the Redlake project:
 
-```text
-https://github.com/zyusong0614/redlake
-```
+[zyusong0614/redlake](https://github.com/zyusong0614/redlake)
 
 Demo video: coming soon.
 
