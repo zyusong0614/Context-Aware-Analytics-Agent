@@ -8,8 +8,8 @@
   ],
   "scripts": {
     "dev:backend": "npm run dev --workspace=@ca3/backend",
-    "dev:frontend": "npm run dev --workspace=ca3-frontend",
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:frontend": "npm run dev --workspace=@ca3/frontend",
+    "dev": "sh -c 'npm run dev:backend & npm run dev:frontend & wait'",
     "build": "npm run build --workspaces",
     "test": "npm run test --workspaces",
     "sync": "cd cli/redlake-ca3 && uv run ca3 sync"

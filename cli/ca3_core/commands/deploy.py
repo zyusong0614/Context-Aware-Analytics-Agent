@@ -21,8 +21,8 @@ DEFAULT_EXCLUSIONS = {
 }
 
 
-def _load_naoignore(project_path: Path) -> set[str]:
-    ignore_file = project_path / ".naoignore"
+def _load_ca3ignore(project_path: Path) -> set[str]:
+    ignore_file = project_path / ".ca3ignore"
     if not ignore_file.exists():
         return set()
     patterns = set()
@@ -93,7 +93,7 @@ def deploy(
 
     UI.print(f"\n[bold]Deploying[/bold] [cyan]{project_name}[/cyan] to [cyan]{url}[/cyan]\n")
 
-    exclusions = DEFAULT_EXCLUSIONS | _load_naoignore(project_path)
+    exclusions = DEFAULT_EXCLUSIONS | _load_ca3ignore(project_path)
 
     UI.print("[dim]Packaging project files...[/dim]")
     tarball = _build_tarball(project_path, exclusions)

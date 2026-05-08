@@ -3,32 +3,18 @@ import { db } from '../db';
 import { chats, messages } from '../db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
-import { env } from '../env';
-import { runAgent } from '../lib/agent';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as yaml from 'js-yaml';
+import { loadEvalCases, listLatestEvalResults, modelLabel, saveEvalResult, verifyEvalCase, type EvalToolCall } from '../lib/evals';
+import { getProjectDir, readProjectConfig, resolveProjectLlmConfig } from '../lib/project-config';
+import type { LlmProvider } from '../types/llm';
 
 export const coreRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
-	
-	const getProjectDir = () => {
-		const dir = env.CA3_DEFAULT_PROJECT_PATH || path.join(process.cwd(), '../../cli/redlake-ca3');
-		if (!fs.existsSync(dir)) {
-			throw new Error(`Project directory not found: ${dir}`);
-		}
-		return dir;
-	};
-
 	// 1. GET /api/core/project
 	fastify.get('/project', async (request, reply) => {
 		try {
 			const dir = getProjectDir();
-			const configPath = path.join(dir, 'ca3_config.yaml');
-			if (!fs.existsSync(configPath)) {
-				return { status: 'error', message: 'ca3_config.yaml not found' };
-			}
-			const configContent = fs.readFileSync(configPath, 'utf8');
-			const config = yaml.load(configContent) as any;
+			const config = readProjectConfig(dir);
 			
 			const projectInfo = {
 				id: config.project_name || 'ca3-project',
@@ -100,14 +86,17 @@ export const coreRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =
 			const databasesDir = path.join(dir, 'databases');
 			const encodedFqdn = request.params.fqdn;
 			
-			// Replace dots with path separators and normalize
-			const relPath = encodedFqdn.replace(/__DOT__/g, path.sep);
+			// Support both real dots and __DOT__ as separators
+			const relPath = encodedFqdn.replace(/__DOT__/g, path.sep).replace(/\./g, path.sep);
 			const tableDir = path.resolve(databasesDir, relPath);
 			
-			// Path Traversal Protection: Ensure the resolved path is within databasesDir
+			// Path Traversal Protection
 			if (!tableDir.startsWith(databasesDir)) {
+				console.warn(`[Security] Blocked path traversal attempt: ${tableDir}`);
 				return reply.status(403).send({ status: 'error', message: 'Forbidden: Path traversal detected' });
 			}
+			
+			console.log(`[Core] Fetching table metadata: ${relPath}`);
 			
 			if (!fs.existsSync(tableDir)) {
 				return reply.status(404).send({ status: 'error', message: `Table not found at ${relPath}` });
@@ -136,7 +125,7 @@ export const coreRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =
 	});
 
 	// 4. GET /api/core/chats
-	fastify.get('/chats', async (request, reply) => {
+	fastify.get('/chats', async () => {
 		const allChats = db.select().from(chats).orderBy(desc(chats.updatedAt)).all();
 		return { status: 'ok', chats: allChats };
 	});
@@ -176,11 +165,7 @@ export const coreRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =
 		}).run();
 
 		const projectPath = getProjectDir();
-		const apiKey = env.ANTHROPIC_API_KEY;
-
-		if (!apiKey) {
-			return reply.status(500).send({ status: 'error', message: 'ANTHROPIC_API_KEY not configured' });
-		}
+		const llm = resolveProjectLlmConfig(projectPath);
 
 		reply.raw.setHeader('Content-Type', 'text/event-stream');
 		reply.raw.setHeader('Cache-Control', 'no-cache');
@@ -194,7 +179,7 @@ export const coreRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =
 
 		try {
 			const { AgentManager } = await import('../lib/agents/agent-manager');
-			const manager = new AgentManager('anthropic', 'claude-haiku-4-5-20251001', projectPath);
+			const manager = new AgentManager(llm.provider, llm.modelId, projectPath, { apiKey: llm.apiKey });
 			
 			await manager.streamResponse(message, (data) => {
 				if (data.type === 'message_delta') {
@@ -220,27 +205,19 @@ export const coreRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =
 	});
 
 	// 7. POST /api/core/agent/stop
-	fastify.post('/agent/stop', async (request, reply) => {
+	fastify.post('/agent/stop', async () => {
 		return { status: 'ok' };
 	});
 
 	// 8. GET /api/core/evals
-	fastify.get('/evals', async (request, reply) => {
+	fastify.get('/evals', async (_request, reply) => {
 		try {
 			const projectDir = getProjectDir();
-			const testsDir = path.join(projectDir, 'tests');
-			if (!fs.existsSync(testsDir)) return { status: 'ok', evals: [] };
-
-			const files = fs.readdirSync(testsDir).filter(f => f.endsWith('.yml') || f.endsWith('.yaml'));
-			const evals: any[] = [];
-
-			for (const file of files) {
-				const content = fs.readFileSync(path.join(testsDir, file), 'utf8');
-				const parsed = yaml.load(content) as any[];
-				if (Array.isArray(parsed)) {
-					evals.push(...parsed.map(e => ({ ...e, file })));
-				}
-			}
+			const latestResults = listLatestEvalResults(projectDir);
+			const evals = loadEvalCases(projectDir).map(testCase => ({
+				...testCase,
+				lastResult: latestResults.get(testCase.id) ?? null,
+			}));
 
 			return { status: 'ok', evals };
 		} catch (e: any) {
@@ -250,26 +227,51 @@ export const coreRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =
 
 	// 9. POST /api/core/evals/run
 	fastify.post('/evals/run', async (request: any, reply) => {
-		const { id } = request.body;
+		const { id, model } = request.body || {};
+		if (!id || typeof id !== 'string') {
+			return reply.status(400).send({ status: 'error', message: 'id is required' });
+		}
 		const projectDir = getProjectDir();
 		
 		try {
-			const { exec } = await import('child_process');
-			const { promisify } = await import('util');
-			const execAsync = promisify(exec);
-
-			// Run the real test command for the specific project
-			const cliDir = path.join(projectDir, '..');
-			await execAsync('uv run ca3 test', { cwd: cliDir });
-
-			const resultsPath = path.join(projectDir, 'test_results.json');
-			if (fs.existsSync(resultsPath)) {
-				const allResults = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
-				const testResult = allResults.find((r: any) => r.id === id);
-				return { status: 'ok', result: testResult || { status: 'completed', message: 'No specific result found' } };
+			const testCase = loadEvalCases(projectDir).find(item => item.id === id);
+			if (!testCase) {
+				return reply.status(404).send({ status: 'error', message: `Evaluation not found: ${id}` });
 			}
-			
-			return { status: 'ok', message: 'Evaluation completed' };
+
+			const llm = resolveProjectLlmConfig(projectDir, {
+				provider: model?.provider as LlmProvider | undefined,
+				modelId: model?.modelId,
+			});
+			const textParts: string[] = [];
+			const toolCalls: EvalToolCall[] = [];
+			const startedAt = Date.now();
+
+			const { AgentManager } = await import('../lib/agents/agent-manager');
+			const manager = new AgentManager(llm.provider, llm.modelId, projectDir, { apiKey: llm.apiKey });
+			await manager.streamResponse(testCase.question, (event) => {
+				if (event.type === 'message_delta' && typeof event.content === 'string') {
+					textParts.push(event.content);
+				}
+				if (event.type === 'tool_result') {
+					toolCalls.push({
+						toolName: event.toolName,
+						input: event.input,
+						output: event.output,
+					});
+				}
+			});
+
+			const result = verifyEvalCase({
+				testCase,
+				toolCalls,
+				responseText: textParts.join(''),
+				model: modelLabel(llm.provider, llm.modelId),
+				durationMs: Date.now() - startedAt,
+			});
+			saveEvalResult(projectDir, result);
+
+			return { status: 'ok', result };
 		} catch (e: any) {
 			console.error('Eval Error:', e);
 			return reply.status(500).send({ status: 'error', message: e.message });

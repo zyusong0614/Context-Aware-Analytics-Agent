@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { LanguageModelV3 } from 'ai';
+import type { LanguageModel } from 'ai';
 import type { AnthropicProviderOptions } from '@ai-sdk/anthropic';
 
 export const LLM_PROVIDERS = ['anthropic', 'google', 'openai'] as const;
@@ -39,7 +39,7 @@ export type ProviderModel<P extends LlmProvider> = {
 export type ProviderConfig<P extends LlmProvider> = {
 	envVar: string;
 	models: readonly ProviderModel<P>[];
-	create: (settings: ProviderSettings, modelId: string) => LanguageModelV3;
+	create: (settings: ProviderSettings, modelId: string) => LanguageModel;
 	defaultOptions?: ProviderConfigMap[P];
 };
 

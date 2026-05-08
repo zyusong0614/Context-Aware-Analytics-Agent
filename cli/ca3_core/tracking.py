@@ -92,7 +92,7 @@ def track_command(command_name: str) -> Callable[[F], F]:
     """Decorator to track command execution.
 
     Captures cli_command_started and cli_command_completed events with:
-    - Persistent distinct_id (stored in ~/.nao/distinct_id)
+    - Persistent distinct_id (stored in ~/.ca3/distinct_id)
     - Session ID to group events from this invocation
     - System properties (os, os_version, python_version)
     - Command name and completion status

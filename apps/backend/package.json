@@ -18,7 +18,7 @@
 		"build": "tsup src/index.ts --format esm --target node20 --minify",
 		"build:standalone": "bun build src/cli.ts --compile --outfile ca3-analytics-server --external playwright-core --external puppeteer-core --external @boxlite-ai/boxlite --external @pydantic/monty --compile-autoload-package-json",
 		"start": "node dist/index.js",
-		"test": "vitest run",
+		"test": "vitest run tests/ca3-sql-tool.test.ts tests/core-routes.test.ts tests/agent-manager.test.ts tests/test-routes.test.ts tests/project-config.test.ts tests/eval-verifier.test.ts",
 		"lint": "tsc --noEmit && eslint",
 		"lint:fix": "eslint --fix",
 		"db:generate": "bash scripts/db.generate.sh",

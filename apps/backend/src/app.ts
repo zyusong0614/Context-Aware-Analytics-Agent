@@ -6,6 +6,7 @@ import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
 import { coreRoutes } from './routes/core';
+import { testRoutes } from './routes/test';
 
 // Get the directory of the current module
 const __filename = fileURLToPath(import.meta.url);
@@ -25,6 +26,10 @@ app.setSerializerCompiler(serializerCompiler);
 // Register Core API
 app.register(coreRoutes, {
 	prefix: '/api/core',
+});
+
+app.register(testRoutes, {
+	prefix: '/api/test',
 });
 
 // Serve frontend static files

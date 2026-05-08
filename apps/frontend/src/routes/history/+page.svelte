@@ -1,6 +1,13 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	let history = $state([]);
+
+	type ChatHistoryItem = {
+		id: string;
+		title: string;
+		updatedAt: number;
+	};
+
+	let history = $state<ChatHistoryItem[]>([]);
 
 	onMount(async () => {
 		const res = await fetch('/api/core/chats');

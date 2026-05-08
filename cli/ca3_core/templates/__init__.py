@@ -7,7 +7,7 @@ Default templates are stored in this package and can be overridden by
 placing templates with the same name in the project's `templates/` directory.
 
 Additionally, this module supports rendering user Jinja templates in the
-context folder, making the `nao` object available for accessing provider data.
+context folder, making the `ca3` object available for accessing provider data.
 
 Example user template (docs/report.md.j2):
     # {{ ca3.config.project_name }}
@@ -15,7 +15,7 @@ Example user template (docs/report.md.j2):
     {{ ca3.notion.page('https://notion.so/...').content }}
 """
 
-from .context import NaoContext, NotionPage, NotionProvider, create_nao_context
+from .context import Ca3Context, NotionPage, NotionProvider, create_ca3_context
 from .engine import TemplateEngine, get_template_engine
 from .render import (
     TemplateRenderResult,
@@ -29,10 +29,10 @@ __all__ = [
     "TemplateEngine",
     "get_template_engine",
     # Context
-    "NaoContext",
+    "Ca3Context",
     "NotionPage",
     "NotionProvider",
-    "create_nao_context",
+    "create_ca3_context",
     # Render
     "TemplateRenderResult",
     "discover_templates",

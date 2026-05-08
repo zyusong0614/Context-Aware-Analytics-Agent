@@ -19,9 +19,17 @@ dist/
 # Project Data
 cli/*/databases/
 test_results.json
+tests/outputs/
+cli/*/tests/outputs/
 *.log
 
 # IDE
 .vscode/
 .idea/
 .DS_Store
+._*
+.!*
+
+# Local databases
+apps/backend/ca3_local.db
+apps/backend/db.sqlite

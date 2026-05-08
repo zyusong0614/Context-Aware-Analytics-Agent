@@ -1,12 +1,13 @@
-import js from '@eslint/js';
-import tseslint from 'typescript-eslint';
+import js from './apps/backend/node_modules/@eslint/js/src/index.js';
+import tseslint from './apps/backend/node_modules/typescript-eslint/dist/index.js';
 
 export default [
 	{
 		ignores: [
-			'dist/**',
-			'node_modules/**',
-			'migrations*/**',
+			'**/node_modules/**',
+			'**/dist/**',
+			'**/.svelte-kit/**',
+			'**/migrations*/**',
 			'**/._*',
 			'**/.!*',
 		],

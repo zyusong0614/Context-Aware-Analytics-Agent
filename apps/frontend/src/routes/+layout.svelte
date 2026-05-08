@@ -6,9 +6,14 @@
 
 	let { children } = $props();
 	let currentPath = $derived(page.url.pathname);
+
+	type ProjectInfo = {
+		name: string;
+		path: string;
+	};
 	
 	// App state
-	let project = $state(null);
+	let project = $state<ProjectInfo | null>(null);
 	
 	onMount(async () => {
 		try {

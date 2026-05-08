@@ -1,27 +1,33 @@
-import { streamText, type LanguageModelV3 } from 'ai';
+import { streamText, stepCountIs, type LanguageModel } from 'ai';
+import type { LlmProvider } from '../../types/llm';
 import { createContextTools } from '../tools/context';
 import { createSqlTools } from '../tools/sql';
-import { createProviderModel } from './providers';
+import { createProviderModel, LLM_PROVIDERS } from './providers';
 import { env } from '../../env';
 
 export class AgentManager {
-	private model: LanguageModelV3;
+	private model: LanguageModel;
 	private projectPath: string;
 
-	constructor(provider: any, modelId: string, projectPath: string) {
-		const apiKey = env.ANTHROPIC_API_KEY; // Fallback to env for now
-		const { model } = createProviderModel(provider, { apiKey: apiKey! }, modelId);
+	constructor(provider: LlmProvider, modelId: string, projectPath: string, settings: { apiKey?: string } = {}) {
+		const config = LLM_PROVIDERS[provider];
+		const apiKey = settings.apiKey ?? env[config.envVar as keyof typeof env];
+		if (typeof apiKey !== 'string' || !apiKey) {
+			throw new Error(`${config.envVar} not configured`);
+		}
+
+		const { model } = createProviderModel(provider, { apiKey }, modelId);
 		this.model = model;
 		this.projectPath = projectPath;
 	}
 
 	async streamResponse(message: string, onProgress: (data: any) => void) {
 		const contextTools = createContextTools(this.projectPath);
-		const sqlTools = createSqlTools('http://localhost:8005');
+		const sqlTools = createSqlTools('http://localhost:8005', this.projectPath);
 
 		const result = await streamText({
 			model: this.model,
-			maxSteps: 10,
+			stopWhen: stepCountIs(10),
 			system: `You are a professional BigQuery Data Analyst.
 Your goal is to answer the user's question by generating and executing SQL.
 
@@ -40,19 +46,42 @@ CRITICAL:
 			messages: [{ role: 'user', content: message }],
 			tools: {
 				...contextTools,
-				...sqlTools
+				...sqlTools,
 			},
 			onStepFinish: (step) => {
-				onProgress({ type: 'status', message: `Step finished: ${step.toolCalls.length} tools called.` });
-				if (step.toolResults.length > 0) {
-					onProgress({ type: 'tool_result', data: step.toolResults });
+				// Log tool calls for debugging but don't send noisy status to UI
+				if (step.toolCalls.length > 0) {
+					console.log(`[Agent] Step finished: ${step.toolCalls.map(t => t.toolName).join(', ')}`);
 				}
 			}
 		});
 
 		for await (const delta of result.fullStream) {
-			if (delta.type === 'text-delta') {
-				onProgress({ type: 'message_delta', content: delta.textDelta });
+			switch (delta.type) {
+				case 'text-delta':
+					onProgress({ type: 'message_delta', content: delta.text });
+					break;
+				case 'tool-call':
+					console.log(`[Agent] Calling tool: ${delta.toolName}`, delta.input);
+					onProgress({ type: 'status', message: `Calling tool: ${delta.toolName}...` });
+					break;
+				case 'tool-result':
+					console.log(`[Agent] Tool result from: ${delta.toolName}`);
+					onProgress({
+						type: 'tool_result',
+						toolName: delta.toolName,
+						input: delta.input,
+						output: delta.output,
+					});
+					break;
+				case 'error':
+					console.error(`[Agent] Stream Error:`, delta.error);
+					onProgress({ type: 'error', message: String(delta.error) });
+					break;
+				case 'finish':
+					console.log(`[Agent] Stream Finished. Reason: ${delta.finishReason}. Usage:`, delta.totalUsage);
+					onProgress({ type: 'final' });
+					break;
 			}
 		}
 	}

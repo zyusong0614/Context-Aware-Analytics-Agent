@@ -47,6 +47,15 @@ class VerificationResult:
 
 
 @dataclass
+class EvalCheckResult:
+    """Structured verification checks returned by the backend eval runner."""
+
+    sqlContains: dict[str, Any] | None = None
+    sqlForbidden: dict[str, Any] | None = None
+    rows: dict[str, Any] | None = None
+
+
+@dataclass
 class TestResult:
     """Result from running a test prompt."""
 
@@ -56,6 +65,12 @@ class TestResult:
     cost: TokenCost
     finish_reason: str
     duration_ms: int
+    passed: bool | None = None
+    message: str | None = None
+    checks: dict[str, Any] | None = None
+    generated_sql: str | None = None
+    actual_rows: list[dict[str, Any]] | None = None
+    expected_rows: list[dict[str, Any]] | None = None
     verification: VerificationResult | None = None
 
 
@@ -148,6 +163,51 @@ class AgentClient:
             finish_reason=data["finishReason"],
             duration_ms=data.get("durationMs", 0),
             verification=VerificationResult(**data["verification"]) if data.get("verification") else None,
+        )
+
+    def run_eval(
+        self,
+        test_case: TestCase,
+        provider: str,
+        model_id: str,
+        retry_auth: bool = True,
+    ) -> TestResult:
+        """Run one backend-native eval case and return the verified result."""
+        session = self._get_session()
+
+        response = session.post(
+            f"{self.backend_url}/api/core/evals/run",
+            json={
+                "id": test_case.name,
+                "model": {
+                    "provider": provider,
+                    "modelId": model_id,
+                },
+            },
+        )
+
+        if response.status_code == 401:
+            if retry_auth and self._handle_auth_retry():
+                return self.run_eval(test_case, provider, model_id, retry_auth=False)
+            raise AgentClientError("Unauthorized. Please check your credentials.")
+
+        if response.status_code != 200:
+            raise AgentClientError(f"Request failed: {response.status_code} {response.text}")
+
+        result = response.json()["result"]
+        return TestResult(
+            text=result.get("responseText", ""),
+            tool_calls=result.get("toolCalls", []),
+            usage=TokenUsage(totalTokens=0),
+            cost=TokenCost(totalCost=0),
+            finish_reason="stop",
+            duration_ms=result.get("durationMs", 0),
+            passed=result.get("passed"),
+            message=result.get("message"),
+            checks=result.get("checks"),
+            generated_sql=result.get("generatedSql"),
+            actual_rows=result.get("actualRows"),
+            expected_rows=result.get("expectedRows"),
         )
 
 

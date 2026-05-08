@@ -189,7 +189,7 @@ When you connect BigQuery during `ca3 init`, the service account used by `creden
 - Project: `roles/bigquery.jobUser` (or `roles/bigquery.user`) so the CLI can submit queries
 - Each dataset you sync: `roles/bigquery.dataViewer` (or higher) to read tables
 
-The combination above mirrors the typical "BigQuery User" setup and is sufficient for nao's metadata and preview pulls.
+The combination above mirrors the typical "BigQuery User" setup and is sufficient for CA3 metadata and preview pulls.
 
 ### Snowflake authentication
 

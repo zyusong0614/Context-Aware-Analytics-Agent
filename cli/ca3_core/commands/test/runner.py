@@ -54,6 +54,7 @@ class TestRunDetails:
 class TestRunResult:
     """Result of a single test run."""
 
+    id: str
     name: str
     model: str
     passed: bool
@@ -184,7 +185,7 @@ def run_test(
     client = get_client(email=email, password=password)
 
     try:
-        result = client.run_test(test_case, provider=model.provider, model_id=model.model_id)
+        result = client.run_eval(test_case, provider=model.provider, model_id=model.model_id)
 
         if result.text:
             UI.print(f"[dim]  Response: {result.text[:200]}...[/dim]")
@@ -198,40 +199,25 @@ def run_test(
         UI.print(f"[dim]  Cost: ${result.cost.totalCost}[/dim]")
         UI.print(f"[dim]  Time: {result.duration_ms}ms[/dim]")
 
-        if result.verification:
-            passed, msg, comparison = check_dataframe(result.verification)
-            status = "[green]✓[/green]" if passed else "[red]✗[/red]"
-            UI.print(f"  {status} {msg}")
-            return TestRunResult(
-                name=test_case.name,
-                model=str(model),
-                passed=passed,
-                message=msg,
-                tokens=result.usage.totalTokens,
-                cost=result.cost.totalCost,
-                duration_ms=result.duration_ms,
-                tool_call_count=tool_call_count,
-                details=TestRunDetails(
-                    response_text=result.text,
-                    actual_data=result.verification.data,
-                    expected_data=result.verification.expectedData,
-                    comparison=comparison,
-                    tool_calls=result.tool_calls,
-                ),
-            )
-
-        UI.print("[yellow]  ⚠ no verification data[/yellow]")
+        passed = bool(result.passed)
+        status = "[green]✓[/green]" if passed else "[red]✗[/red]"
+        msg = result.message or ("pass" if passed else "failed")
+        UI.print(f"  {status} {msg}")
         return TestRunResult(
+            id=test_case.name,
             name=test_case.name,
             model=str(model),
-            passed=True,
-            message="no verification",
+            passed=passed,
+            message=msg,
             tokens=result.usage.totalTokens,
             cost=result.cost.totalCost,
             duration_ms=result.duration_ms,
             tool_call_count=tool_call_count,
             details=TestRunDetails(
                 response_text=result.text,
+                actual_data=result.actual_rows,
+                expected_data=result.expected_rows,
+                comparison=json.dumps(result.checks, indent=2) if result.checks else None,
                 tool_calls=result.tool_calls,
             ),
         )
@@ -239,6 +225,7 @@ def run_test(
     except AgentClientError as e:
         UI.error(str(e))
         return TestRunResult(
+            id=test_case.name,
             name=test_case.name,
             model=str(model),
             passed=False,
@@ -292,6 +279,13 @@ def filter_test_cases(test_cases: list[TestCase], selected_test: str | None) -> 
         raise ValueError(f"Multiple tests match '{selected_test}': {names}")
 
     return [matches[0]]
+
+
+def default_models_from_config(config: Ca3Config) -> list[str]:
+    """Use the project LLM config as the default eval model."""
+    if config.llm and config.llm.provider and config.llm.annotation_model:
+        return [f"{config.llm.provider.value}:{config.llm.annotation_model}"]
+    return DEFAULT_MODELS
 
 
 def test(
@@ -350,7 +344,7 @@ def test(
     assert config is not None
 
     # Parse models
-    model_strs = models if models else DEFAULT_MODELS
+    model_strs = models if models else default_models_from_config(config)
     try:
         model_configs = [ModelConfig.parse(m) for m in model_strs]
     except ValueError as e:

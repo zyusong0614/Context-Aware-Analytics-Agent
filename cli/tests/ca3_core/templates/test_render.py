@@ -18,7 +18,7 @@ class TestRenderTemplateToJsonFilter:
         mock_context = {"data": {"name": "テスト", "emoji": "🎉"}}
 
         with patch("ca3_core.templates.render.create_ca3_context") as mock_create:
-            mock_ca3 = type("Nao", (), mock_context)()
+            mock_ca3 = type("CA3", (), mock_context)()
             mock_create.return_value = mock_ca3
 
             output_path = render_template(
@@ -47,7 +47,7 @@ class TestRenderTemplateToJsonFilter:
         mock_context = {"rows": rows}
 
         with patch("ca3_core.templates.render.create_ca3_context") as mock_create:
-            mock_ca3 = type("Nao", (), mock_context)()
+            mock_ca3 = type("CA3", (), mock_context)()
             mock_create.return_value = mock_ca3
 
             output_path = render_template(

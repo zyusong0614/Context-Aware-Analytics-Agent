@@ -1,6 +1,14 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	let tables = $state([]);
+
+	type TableSummary = {
+		database: string;
+		schema: string;
+		table: string;
+		fqdn: string;
+	};
+
+	let tables = $state<TableSummary[]>([]);
 	let loading = $state(true);
 
 	onMount(async () => {

@@ -56,6 +56,8 @@ const envSchema = z.object({
 	CA3_PROJECTS_DIR: z.string().default('./projects'),
 	CA3_CORE_VERSION: z.string().optional(),
 	ANTHROPIC_API_KEY: z.string().optional(),
+	GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
+	OPENAI_API_KEY: z.string().optional(),
 
 	POSTHOG_KEY: z.string().optional(),
 	POSTHOG_HOST: z.url({ message: 'POSTHOG_HOST must be a valid URL' }).optional(),

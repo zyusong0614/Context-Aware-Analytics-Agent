@@ -2,14 +2,14 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import axios from 'axios';
 
-export const createSqlTools = (sidecarUrl: string) => {
+export const createSqlTools = (sidecarUrl: string, projectPath?: string) => {
 	return {
 		execute_bigquery_sql: tool({
 			description: 'Execute a SELECT query against BigQuery. Ensure the SQL is valid and contains a LIMIT clause.',
-			parameters: z.object({
+			inputSchema: z.object({
 				sql: z.string().describe('The SELECT SQL statement to execute.'),
 			}),
-			execute: async ({ sql }) => {
+			execute: async ({ sql }: { sql: string }) => {
 				// 1. Pre-execution Validation
 				const upperSql = sql.toUpperCase().trim();
 				
@@ -29,27 +29,29 @@ export const createSqlTools = (sidecarUrl: string) => {
 
 				// 3. Execution via Sidecar
 				try {
-					const response = await axios.post(`${sidecarUrl}/api/ibis/execute`, {
+					const response = await axios.post(`${sidecarUrl}/execute_sql`, {
 						sql: finalSql,
-						backend: 'bigquery'
+						ca3_project_folder: projectPath ?? process.env.CA3_DEFAULT_PROJECT_PATH ?? `${process.cwd()}/../../cli/redlake-ca3`,
 					});
 
 					const { data } = response;
-					if (data.status === 'error') {
+					if (data.status === 'error' || data.error) {
 						return { 
-							error: data.message, 
+							error: data.message ?? data.error, 
 							suggestion: 'Analyze the error and the table metadata to fix the SQL.' 
 						};
 					}
 
 					return {
-						results: data.results,
+						sql: finalSql,
+						results: data.data ?? data.results ?? [],
 						columns: data.columns,
-						rowCount: data.results.length,
-						message: data.results.length >= 100 ? 'Query results truncated to 100 rows.' : 'Success'
+						rowCount: data.row_count ?? data.results?.length ?? data.data?.length ?? 0,
+						message: (data.row_count ?? data.data?.length ?? 0) >= 100 ? 'Query results truncated to 100 rows.' : 'Success'
 					};
 				} catch (e: any) {
-					return { error: `Connection to SQL engine failed: ${e.message}` };
+					const detail = e.response?.data?.detail ?? e.response?.data?.message ?? e.message;
+					return { error: `Connection to SQL engine failed: ${detail}` };
 				}
 			},
 		}),

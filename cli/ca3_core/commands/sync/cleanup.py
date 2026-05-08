@@ -149,7 +149,7 @@ def cleanup_stale_databases(active_databases: List, base_path: Path, verbose: bo
 
         type_folder_name = type_dir.name
 
-        # Remove entire type directory if it doesn't exist in nao_config
+        # Remove entire type directory if it doesn't exist in ca3_config
         if type_folder_name not in valid_db_folders_by_type:
             shutil.rmtree(type_dir)
             if verbose:
@@ -158,7 +158,7 @@ def cleanup_stale_databases(active_databases: List, base_path: Path, verbose: bo
 
         valid_db_folders = valid_db_folders_by_type[type_folder_name]
 
-        # Remove unused database folders if it doesn't exist in nao_config
+        # Remove unused database folders if it doesn't exist in ca3_config
         for db_dir in type_dir.iterdir():
             if not db_dir.is_dir():
                 continue

@@ -257,7 +257,7 @@ class Ca3Config(BaseModel):
         with config_file.open("w") as f:
             # Documentation Link
             f.write("# Configuration documentation:\n")
-            f.write("# https://docs.getca3.io/ca3-agent/context-builder/configuration#nao_config-yaml\n\n")
+            f.write("# https://docs.getca3.io/ca3-agent/context-builder/configuration#ca3_config-yaml\n\n")
 
             yaml.dump(
                 self.model_dump(mode="json", by_alias=True, exclude_none=True),

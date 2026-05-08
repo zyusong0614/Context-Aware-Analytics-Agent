@@ -8,7 +8,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from ca3_core.config.llm import LLMConfig, LLMProvider
 
-# Path to the default templates shipped with nao
+# Path to the default templates shipped with ca3
 DEFAULT_TEMPLATES_DIR = Path(__file__).parent / "defaults"
 
 
@@ -17,7 +17,7 @@ class TemplateEngine:
 
     Templates are looked up in the following order:
     1. User's project `templates/` directory (if exists)
-    2. Default templates shipped with nao
+    2. Default templates shipped with ca3
 
     This allows users to customize output by creating a `templates/` folder
     in their ca3 project and adding templates with the same names as the defaults.

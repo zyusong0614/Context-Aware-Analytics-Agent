@@ -1,6 +1,7 @@
 """Authentication utilities for ca3 CLI."""
 
 import json
+import sys
 from pathlib import Path
 
 import requests
@@ -8,7 +9,7 @@ import requests
 from ca3_core.ui import UI, ask_text
 
 # Store credentials in user's home directory
-AUTH_FILE = Path.home() / ".nao" / "auth.json"
+AUTH_FILE = Path.home() / ".ca3" / "auth.json"
 
 
 def get_stored_cookies() -> dict[str, str] | None:
@@ -115,9 +116,11 @@ def get_auth_session(
 
     if cookies:
         session.cookies.update(cookies)
-    elif prompt_if_missing:
+    elif prompt_if_missing and sys.stdin.isatty():
         cookies = prompt_login(backend_url)
         if cookies:
             session.cookies.update(cookies)
+    elif prompt_if_missing:
+        UI.warn("Authentication required, but no credentials were provided and stdin is not interactive.")
 
     return session

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * Dynamically imports the tools module with a mocked `path` implementation
- * (posix or win32) and a stubbed `fs` (no .naoignore files on disk).
+ * (posix or win32) and a stubbed `fs` (no .ca3ignore files on disk).
  */
 async function loadTools(variant: 'posix' | 'win32') {
 	vi.resetModules();
@@ -17,7 +17,7 @@ async function loadTools(variant: 'posix' | 'win32') {
 	}));
 
 	const tools = await import('../src/utils/tools');
-	tools.clearNaoignoreCache();
+	tools.clearCa3ignoreCache();
 	return tools;
 }
 

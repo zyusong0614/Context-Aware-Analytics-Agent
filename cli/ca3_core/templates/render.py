@@ -1,7 +1,7 @@
 """Render user Jinja templates in the context folder.
 
 This module discovers and renders `.j2` files in the ca3 context folder,
-making the `nao` object available for accessing provider data.
+making the `ca3` object available for accessing provider data.
 
 Template files are rendered to the same location without the `.j2` extension.
 For example: `docs/report.md.j2` → `docs/report.md`
@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 
 from jinja2 import Environment, FileSystemLoader, TemplateError
 
-from .context import create_nao_context
+from .context import create_ca3_context
 
 if TYPE_CHECKING:
     from rich.console import Console
@@ -66,7 +66,7 @@ def discover_templates(
             "venv",
             "node_modules",
             "__pycache__",
-            ".nao",
+            ".ca3",
         }
 
     templates: list[Path] = []
@@ -115,11 +115,11 @@ def render_template(
     env.filters["to_json"] = lambda v, indent=None: json.dumps(v, indent=indent, default=str, ensure_ascii=False)
 
     # Create the ca3 context
-    ca3 = create_nao_context(config)
+    ca3 = create_ca3_context(config)
 
     # Load and render the template
     template = env.get_template(str(template_path))
-    rendered = template.render(ca3=nao)
+    rendered = template.render(ca3=ca3)
 
     # Determine output path (remove .j2 extension)
     output_path = project_path / str(template_path)[:-3]  # Remove .j2

@@ -1,6 +1,6 @@
 """Context object for Jinja templates in the ca3 context folder.
 
-This module provides the `nao` object that is exposed to user Jinja templates,
+This module provides the `ca3` object that is exposed to user Jinja templates,
 allowing them to access data from various providers like Notion, databases, etc.
 
 Example template usage:
@@ -141,8 +141,8 @@ class NotionProvider:
         return self._page_cache[page_url_or_id]
 
 
-class NaoContext:
-    """The main context object exposed as `nao` in user templates.
+class Ca3Context:
+    """The main context object exposed as `ca3` in user templates.
 
     This object provides access to data from various providers like Notion,
     databases, and repositories. Data is lazy-loaded to avoid unnecessary
@@ -186,13 +186,13 @@ class NaoContext:
     #     return RepoProvider(self._config)
 
 
-def create_nao_context(config: Ca3Config) -> NaoContext:
-    """Create a NaoContext for template rendering.
+def create_ca3_context(config: Ca3Config) -> Ca3Context:
+    """Create a Ca3Context for template rendering.
 
     Args:
         config: The ca3 configuration.
 
     Returns:
-        A NaoContext instance to be used as `nao` in templates.
+        A Ca3Context instance to be used as `ca3` in templates.
     """
-    return NaoContext(config)
+    return Ca3Context(config)

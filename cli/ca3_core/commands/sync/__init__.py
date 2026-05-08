@@ -43,7 +43,7 @@ def sync(
       - databases/<type>/<connection>/<dataset>/<table>/*.md  (database schemas)
 
     After syncing providers, renders any Jinja templates (*.j2 files) found in
-    the project directory, making the `nao` context object available for
+    the project directory, making the `ca3` context object available for
     accessing provider data.
     """
     console.print("\n[bold cyan]🔄 ca3 sync[/bold cyan]\n")

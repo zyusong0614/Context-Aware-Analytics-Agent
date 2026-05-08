@@ -1,6 +1,6 @@
 # CA3 Agent Architecture
 
-This document describes the design and implementation of the **Context-Aware Analytics Agent (CA3)**, following the best practices from the `nao` repository.
+This document describes the design and implementation of the **Context-Aware Analytics Agent (CA3)**, following established analytics-agent best practices.
 
 ## 🤖 Core Engine
 CA3 uses the **Vercel AI SDK** with the `streamText` function and `maxSteps: 10`. This allows the agent to iteratively call tools and self-correct based on execution feedback.

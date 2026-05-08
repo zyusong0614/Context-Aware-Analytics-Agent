@@ -4,6 +4,7 @@
 
 	let { children } = $props();
 	let chatId = $derived(page.url.searchParams.get('chatId'));
+	let activeChatId = $state<string | null>(null);
 	
 	let inputMessage = $state('');
 	let messages = $state([
@@ -11,6 +12,7 @@
 	]);
 	
 	let isGenerating = $state(false);
+	let agentStatus = $state(''); // Current tool-call status, shown as a sub-indicator
 	
 	// Inspector state
 	let inspectorOpen = $state(true);
@@ -19,6 +21,7 @@
 	let queryResults = $state([]);
 
 	onMount(async () => {
+		activeChatId = chatId;
 		if (chatId) {
 			try {
 				const res = await fetch(`/api/core/chats/${chatId}`);
@@ -58,7 +61,7 @@
 			const res = await fetch('/api/core/agent', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ message: msg, chatId })
+				body: JSON.stringify({ message: msg, chatId: activeChatId })
 			});
 			
 			const reader = res.body?.getReader();
@@ -79,21 +82,49 @@
 					if (!line.startsWith('data: ')) continue;
 					try {
 						const data = JSON.parse(line.slice(6));
+
+						if (data.chatId && !activeChatId) {
+							activeChatId = data.chatId;
+							window.history.replaceState(null, '', `?chatId=${data.chatId}`);
+						}
 						
 						if (data.type === 'status') {
-							messages[assistantIdx].content = `*${data.message}*`;
-						} else if (data.type === 'message_delta') {
-							if (messages[assistantIdx].content.startsWith('*')) {
-								messages[assistantIdx].content = '';
+							// Show tool-call status as a sub-indicator, don't overwrite message
+							agentStatus = data.message;
+							// Set placeholder only if content is completely empty
+							if (!messages[assistantIdx].content) {
+								messages[assistantIdx].content = ' ';
 							}
-							messages[assistantIdx].content += data.content;
+						} else if (data.type === 'message_delta') {
+							agentStatus = '';
+							if (typeof data.content === 'string') {
+								if (messages[assistantIdx].content === ' ') {
+									messages[assistantIdx].content = '';
+								}
+								messages[assistantIdx].content += data.content;
+							}
 						} else if (data.type === 'sql') {
 							currentSql = data.sql;
 						} else if (data.type === 'results') {
 							queryResults = data.data;
 							usedTables = data.tables || [];
+						} else if (data.type === 'tool_result') {
+							if (data.toolName === 'search_tables') {
+								usedTables = data.output?.matches || [];
+							}
+							if (data.toolName === 'execute_bigquery_sql') {
+								if (data.input?.sql) currentSql = data.input.sql;
+								if (data.output?.results) queryResults = data.output.results;
+							}
 						} else if (data.type === 'error') {
-							messages[assistantIdx].content = `Error: ${data.message}`;
+							agentStatus = '';
+							messages[assistantIdx].content = `⚠️ Error: ${data.message}`;
+						} else if (data.type === 'final') {
+							agentStatus = '';
+							// Clean up empty placeholder
+							if (messages[assistantIdx].content === ' ') {
+								messages[assistantIdx].content = '(No response generated)';
+							}
 						}
 					} catch (e) {
 						console.error('Error parsing SSE:', e);
@@ -141,7 +172,7 @@
 			</div>
 		{/each}
 		{#if isGenerating}
-			<div class="flex items-start">
+			<div class="flex flex-col items-start gap-2">
 				<div class="bg-neutral-800 rounded-2xl px-5 py-4 min-w-[80px]">
 					<div class="flex space-x-2 items-center justify-center">
 						<div class="w-1.5 h-1.5 bg-emerald-500/60 rounded-full animate-pulse"></div>
@@ -149,6 +180,9 @@
 						<div class="w-1.5 h-1.5 bg-emerald-500/60 rounded-full animate-pulse" style="animation-delay: 0.4s"></div>
 					</div>
 				</div>
+				{#if agentStatus}
+					<div class="text-xs text-neutral-500 font-mono px-1 animate-pulse">{agentStatus}</div>
+				{/if}
 			</div>
 		{/if}
 	</div>
@@ -177,6 +211,7 @@
 				></textarea>
 				<button 
 					type="submit" 
+					aria-label="Send message"
 					disabled={!inputMessage.trim() || isGenerating}
 					class="absolute right-3 p-2.5 text-white bg-emerald-600 rounded-xl disabled:opacity-20 disabled:grayscale hover:bg-emerald-500 active:scale-95 transition-all shadow-lg"
 				>
@@ -221,7 +256,7 @@
 			<div class="bg-neutral-950 border border-neutral-800 rounded-md overflow-hidden">
 				<div class="flex items-center justify-between px-3 py-1.5 bg-neutral-800 border-b border-neutral-700">
 					<span class="text-xs text-neutral-400">query.sql</span>
-					<button class="text-neutral-400 hover:text-white"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button>
+					<button aria-label="Copy SQL" class="text-neutral-400 hover:text-white"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button>
 				</div>
 				<pre class="p-3 text-xs text-emerald-400 font-mono overflow-x-auto"><code>{currentSql}</code></pre>
 			</div>

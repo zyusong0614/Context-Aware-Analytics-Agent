@@ -3,11 +3,26 @@
 	import { onMount } from 'svelte';
 	import { marked } from 'marked';
 
-	let fqdn = $derived(page.params.fqdn);
-	let tableData = $state(null);
+	type TableMetadata = {
+		fqdn: string;
+		columns: string | null;
+		preview: string | null;
+		profiling: string | null;
+		howToUse: string | null;
+	};
+
+	let fqdn = $derived(page.params.fqdn ?? '');
+	let tableData = $state<TableMetadata | null>(null);
 	let loading = $state(true);
+	let displayFqdn = $derived(fqdn.replace(/__DOT__/g, '.'));
+	let tableName = $derived(displayFqdn.split('.').pop()?.split('=')[1] || displayFqdn || 'Unknown table');
 
 	onMount(async () => {
+		if (!fqdn) {
+			loading = false;
+			return;
+		}
+
 		try {
 			const res = await fetch(`/api/core/tables/${fqdn}`);
 			const data = await res.json();
@@ -28,7 +43,7 @@
 		<nav class="mb-6 flex items-center space-x-2 text-xs">
 			<a href="/tables" class="text-neutral-500 hover:text-emerald-400">Tables</a>
 			<span class="text-neutral-700">/</span>
-			<span class="text-neutral-300">{fqdn.replace(/__DOT__/g, '.').split('.').pop()?.split('=')[1] || fqdn}</span>
+			<span class="text-neutral-300">{tableName}</span>
 		</nav>
 
 		{#if loading}
@@ -38,8 +53,8 @@
 			</div>
 		{:else if tableData}
 			<header class="mb-8">
-				<h1 class="text-3xl font-bold text-white">{fqdn.replace(/__DOT__/g, '.').split('.').pop()?.split('=')[1] || fqdn}</h1>
-				<p class="text-neutral-500 font-mono text-sm mt-1">{fqdn.replace(/__DOT__/g, '.')}</p>
+				<h1 class="text-3xl font-bold text-white">{tableName}</h1>
+				<p class="text-neutral-500 font-mono text-sm mt-1">{displayFqdn}</p>
 			</header>
 
 			<div class="grid grid-cols-1 gap-8">
